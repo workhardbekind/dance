@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StageCall — Competition Scheduler</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          bg:'#0c0e1f', surface:'#111325', raised:'#181a30', edge:'#21233c',
+          gold:'#d9a84c', bloom:'#e87882', glow:'#7c6de8',
+          ink:'#ece9f8', ghost:'#5e5c82'
+        },
+        fontFamily: { display:["'Cinzel'","serif"], body:["'Outfit'","sans-serif"] }
+      }}
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *,*::before,*::after{font-family:'Outfit',sans-serif;box-sizing:border-box;}
+    body{background:#0c0e1f;color:#ece9f8;min-height:100vh;margin:0;}
+    .font-display{font-family:'Cinzel',serif;}
+    ::-webkit-scrollbar{width:5px;}
+    ::-webkit-scrollbar-track{background:#0c0e1f;}
+    ::-webkit-scrollbar-thumb{background:#21233c;border-radius:3px;}
+
+    #bg-aura{position:fixed;inset:0;pointer-events:none;z-index:0;
+      background:radial-gradient(ellipse 60% 50% at 15% 10%,rgba(124,109,232,.12) 0%,transparent 70%),
+                 radial-gradient(ellipse 40% 30% at 85% 90%,rgba(232,120,130,.1) 0%,transparent 70%);}
+
+    .glass{background:rgba(17,19,37,.8);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.06);}
+    .glass-light{background:rgba(24,26,48,.6);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.07);}
+
+    #nav{position:fixed;top:0;left:0;right:0;z-index:100;height:60px;
+      background:rgba(7,9,23,.92);backdrop-filter:blur(20px);
+      border-bottom:1px solid rgba(255,255,255,.05);}
+
+    .inp{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);
+      border-radius:8px;color:#ece9f8;padding:10px 14px;width:100%;transition:border-color .2s;}
+    .inp:focus{outline:none;border-color:rgba(217,168,76,.5);}
+    .inp::placeholder{color:rgba(236,233,248,.25);}
+    select.inp option{background:#181a30;}
+
+    .btn-gold{background:linear-gradient(135deg,#d9a84c,#c89038);color:#0c0e1f;font-weight:600;
+      padding:10px 20px;border-radius:8px;border:none;cursor:pointer;
+      transition:opacity .2s,transform .1s;display:inline-flex;align-items:center;gap:6px;}
+    .btn-gold:hover{opacity:.9;transform:translateY(-1px);}
+    .btn-ghost{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);
+      color:#ece9f8;padding:9px 18px;border-radius:8px;cursor:pointer;
+      transition:background .2s;display:inline-flex;align-items:center;gap:6px;}
+    .btn-ghost:hover{background:rgba(255,255,255,.1);}
+    .btn-sm{padding:7px 14px;font-size:13px;}
+    .btn-xs{padding:5px 10px;font-size:12px;}
+    .btn-icon{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);
+      color:#ece9f8;width:32px;height:32px;border-radius:7px;cursor:pointer;
+      display:inline-flex;align-items:center;justify-content:center;transition:all .2s;}
+    .btn-icon:hover{background:rgba(255,255,255,.1);}
+    .btn-icon.edit:hover{color:#d9a84c;border-color:rgba(217,168,76,.3);background:rgba(217,168,76,.08);}
+    .btn-icon.del:hover{color:#e87882;border-color:rgba(232,120,130,.3);background:rgba(232,120,130,.08);}
+
+    .shift-btn{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+      color:#ece9f8;padding:6px 12px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;
+      transition:all .2s;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
+    .shift-btn:hover{background:rgba(217,168,76,.12);border-color:rgba(217,168,76,.3);color:#d9a84c;}
+    .shift-btn.minus:hover{background:rgba(232,120,130,.1);border-color:rgba(232,120,130,.3);color:#e87882;}
+
+    .tab{padding:12px 20px;cursor:pointer;border-bottom:2px solid transparent;
+      color:#5e5c82;transition:all .2s;font-weight:500;font-size:14px;}
+    .tab:hover{color:#ece9f8;}
+    .tab.active{color:#d9a84c;border-bottom-color:#d9a84c;}
+
+    .r-row{display:grid;grid-template-columns:90px 1fr auto;gap:12px;align-items:center;
+      padding:14px 16px;border-radius:10px;transition:background .15s;}
+    .r-row:hover{background:rgba(255,255,255,.025);}
+    .r-row.on-now{background:rgba(217,168,76,.06);border:1px solid rgba(217,168,76,.15);}
+    @media(max-width:600px){.r-row{grid-template-columns:75px 1fr;}
+      .r-actions{grid-column:2;justify-self:end;margin-top:4px;}}
+
+    .badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.5px;
+      text-transform:uppercase;padding:3px 8px;border-radius:999px;}
+    .b-ballet{background:rgba(100,140,230,.15);color:#90b0f8;}
+    .b-jazz{background:rgba(240,180,60,.15);color:#f0c840;}
+    .b-hiphop{background:rgba(80,200,120,.15);color:#60d898;}
+    .b-contemp{background:rgba(80,200,200,.15);color:#60d8e0;}
+    .b-lyrical{background:rgba(220,100,180,.15);color:#e880d8;}
+    .b-tap{background:rgba(240,140,60,.15);color:#f0a040;}
+    .b-acro{background:rgba(160,100,240,.15);color:#c090f8;}
+    .b-musical{background:rgba(100,200,80,.15);color:#80d860;}
+    .b-default{background:rgba(255,255,255,.08);color:#9898b8;}
+
+    .stage-pill{font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;}
+
+    .upload-zone{border:2px dashed rgba(255,255,255,.1);border-radius:12px;padding:40px;
+      text-align:center;transition:all .2s;cursor:pointer;}
+    .upload-zone:hover,.upload-zone.drag-over{border-color:rgba(217,168,76,.4);background:rgba(217,168,76,.04);}
+    .upload-zone-sm{border:2px dashed rgba(255,255,255,.1);border-radius:12px;padding:24px;
+      text-align:center;transition:all .2s;cursor:pointer;}
+    .upload-zone-sm:hover,.upload-zone-sm.drag-over{border-color:rgba(124,109,232,.4);background:rgba(124,109,232,.04);}
+
+    .media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
+    .media-card{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;
+      cursor:pointer;background:#181a30;transition:transform .2s;}
+    .media-card:hover{transform:scale(1.03);}
+    .media-card img,.media-card video{width:100%;height:100%;object-fit:cover;}
+    .media-over{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.6) 0%,transparent 50%);}
+
+    .chip{font-size:11px;font-weight:700;letter-spacing:.3px;padding:3px 8px;border-radius:6px;display:inline-block;}
+    .chip-live{background:rgba(217,168,76,.2);color:#d9a84c;animation:blink 1.5s infinite;}
+    .chip-soon{background:rgba(124,109,232,.15);color:#9080e8;}
+    .chip-past{background:rgba(255,255,255,.05);color:#5e5c82;}
+    @keyframes blink{0%,100%{opacity:1;}50%{opacity:.5;}}
+
+    .modal-wrap{position:fixed;inset:0;z-index:200;display:flex;align-items:center;
+      justify-content:center;padding:16px;}
+    .modal-bg{position:absolute;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);}
+    .modal-box{position:relative;z-index:1;background:#111325;
+      border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:28px;
+      width:100%;max-width:540px;max-height:92vh;overflow-y:auto;animation:mIn .25s ease;}
+    .modal-box::-webkit-scrollbar{width:4px;}
+    .modal-box::-webkit-scrollbar-thumb{background:#21233c;}
+    @keyframes mIn{from{transform:scale(.95) translateY(10px);opacity:0;}to{transform:scale(1) translateY(0);opacity:1;}}
+
+    #alert-bar{position:fixed;top:60px;left:0;right:0;z-index:99;
+      background:linear-gradient(90deg,rgba(217,168,76,.15),rgba(232,120,130,.1));
+      border-bottom:1px solid rgba(217,168,76,.2);backdrop-filter:blur(12px);
+      padding:12px 20px;animation:slideD .4s ease;}
+    @keyframes slideD{from{transform:translateY(-100%);}to{transform:translateY(0);}}
+
+    .toast{padding:12px 18px;border-radius:10px;font-size:14px;font-weight:500;min-width:220px;
+      animation:tIn .3s ease;box-shadow:0 8px 24px rgba(0,0,0,.4);}
+    .t-success{background:rgba(93,217,154,.15);border:1px solid rgba(93,217,154,.3);color:#5dd99a;}
+    .t-error{background:rgba(232,120,130,.15);border:1px solid rgba(232,120,130,.3);color:#e87882;}
+    .t-info{background:rgba(124,109,232,.15);border:1px solid rgba(124,109,232,.3);color:#9080e8;}
+    @keyframes tIn{from{transform:translateX(40px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
+    .event-card{background:#111325;border:1px solid rgba(255,255,255,.07);border-radius:14px;
+      padding:22px;cursor:pointer;transition:all .2s;}
+    .event-card:hover{border-color:rgba(217,168,76,.25);background:#161830;
+      transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.3);}
+
+    .viewer-media{max-height:78vh;max-width:100%;border-radius:10px;object-fit:contain;}
+
+    label{display:block;}
+    .form-label{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+      color:#5e5c82;margin-bottom:8px;}
+
+    .slug-prefix{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.09);
+      border-right:none;border-radius:8px 0 0 8px;padding:10px 12px;color:#5e5c82;
+      font-size:13px;white-space:nowrap;display:flex;align-items:center;}
+    .slug-input{border-radius:0 8px 8px 0 !important;border-left:1px solid rgba(255,255,255,.09);}
+
+    .uploader-tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;
+      background:rgba(124,109,232,.15);color:#9080e8;}
+
+    /* Awards */
+    .award-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
+      letter-spacing:.3px;padding:3px 9px;border-radius:999px;border:1px solid;}
+    .award-platinum{background:rgba(200,220,255,.1);border-color:rgba(200,220,255,.3);color:#c8dcff;}
+    .award-high-gold{background:rgba(255,215,80,.12);border-color:rgba(255,215,80,.35);color:#ffd750;}
+    .award-gold{background:rgba(217,168,76,.12);border-color:rgba(217,168,76,.35);color:#d9a84c;}
+    .award-high-silver{background:rgba(210,220,235,.1);border-color:rgba(210,220,235,.3);color:#d2dce8;}
+    .award-silver{background:rgba(180,190,200,.1);border-color:rgba(180,190,200,.3);color:#b4bec8;}
+    .award-high-bronze{background:rgba(205,140,80,.1);border-color:rgba(205,140,80,.3);color:#cd8c50;}
+    .award-bronze{background:rgba(180,110,60,.1);border-color:rgba(180,110,60,.3);color:#b46e3c;}
+    .award-custom{background:rgba(124,109,232,.1);border-color:rgba(124,109,232,.3);color:#9080e8;}
+
+    .award-tag-rm{cursor:pointer;opacity:.5;font-size:12px;line-height:1;margin-left:2px;}
+    .award-tag-rm:hover{opacity:1;}
+    .award-entry{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px 12px;}
+  </style>
+</head>
+<body>
+<div id="bg-aura"></div>
+
+<!-- NAV -->
+<nav id="nav">
+  <div class="max-w-5xl mx-auto h-full flex items-center justify-between px-4">
+    <div class="flex items-center gap-3">
+      <button id="btn-back" class="btn-icon hidden" onclick="goHome()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      </button>
+      <span class="font-display text-xl font-bold tracking-widest cursor-pointer" style="color:#d9a84c" onclick="goHome()">STAGECALL</span>
+    </div>
+    <div id="nav-actions" class="flex items-center gap-2"></div>
+  </div>
+</nav>
+
+<!-- ALERT BANNER -->
+<div id="alert-bar" class="hidden">
+  <div class="max-w-5xl mx-auto flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3 min-w-0">
+      <span class="text-2xl shrink-0">⏰</span>
+      <div class="min-w-0">
+        <span class="font-bold text-gold" id="ab-name"></span>
+        <span class="text-white/70 text-sm ml-2" id="ab-detail"></span>
+      </div>
+    </div>
+    <button onclick="closeAlert()" class="text-white/40 hover:text-white shrink-0 text-lg leading-none">✕</button>
+  </div>
+</div>
+
+<!-- SEATED ALERT BANNER -->
+<div id="seated-bar" class="hidden" style="position:fixed;top:60px;left:0;right:0;z-index:98;
+  background:linear-gradient(90deg,rgba(124,109,232,.18),rgba(80,200,200,.1));
+  border-bottom:1px solid rgba(124,109,232,.25);backdrop-filter:blur(12px);
+  padding:12px 20px;animation:slideD .4s ease;">
+  <div class="max-w-5xl mx-auto flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3 min-w-0">
+      <span class="text-2xl shrink-0">🪑</span>
+      <div class="min-w-0">
+        <span class="font-bold" style="color:#9080e8" id="sa-name"></span>
+        <span class="text-white/60 text-sm ml-2" id="sa-detail"></span>
+      </div>
+    </div>
+    <button onclick="closeSeatedAlert()" class="text-white/40 hover:text-white shrink-0 text-lg leading-none">✕</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<main class="relative z-10 pt-16 max-w-5xl mx-auto px-4 pb-20">
+
+  <!-- HOME VIEW -->
+  <div id="view-home" class="view">
+    <div class="flex items-center justify-between py-8 gap-4 flex-wrap">
+      <div>
+        <h1 class="font-display text-3xl font-bold tracking-wide" style="color:#d9a84c">Competition Schedule</h1>
+        <p class="text-ghost mt-1 text-sm">Manage and share your dancer's routine schedules</p>
+      </div>
+      <button class="btn-gold" onclick="openEventModal(null)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        New Event
+      </button>
+    </div>
+    <div id="events-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    <div id="events-empty" class="hidden text-center py-24">
+      <div class="text-6xl mb-4">🎭</div>
+      <p class="font-display text-xl text-ghost font-semibold">No competitions yet</p>
+      <p class="text-ghost text-sm mt-2">Create your first event to get started</p>
+      <button class="btn-gold mt-6" onclick="openEventModal(null)">Create Your First Event</button>
+    </div>
+  </div>
+
+  <!-- EVENT VIEW -->
+  <div id="view-event" class="view hidden">
+    <div id="event-hdr" class="py-7 border-b border-edge/50"></div>
+    <div class="flex border-b border-edge/40 gap-1 overflow-x-auto">
+      <button class="tab active" data-tab="schedule" onclick="switchTab('schedule')">Schedule</button>
+      <button class="tab" data-tab="media"    onclick="switchTab('media')">Media</button>
+      <button class="tab" data-tab="settings" onclick="switchTab('settings')">Settings</button>
+    </div>
+    <div id="tab-schedule" class="tab-pane py-5"></div>
+    <div id="tab-media"    class="tab-pane py-5 hidden"></div>
+    <div id="tab-settings" class="tab-pane py-5 hidden"></div>
+  </div>
+
+  <!-- SHARE VIEW -->
+  <div id="view-share" class="view hidden pt-0 -mx-4"></div>
+
+</main>
+
+<!-- TOASTS -->
+<div id="toasts" class="fixed bottom-6 right-4 z-[300] flex flex-col gap-2 pointer-events-none"></div>
+
+<!-- MODAL: Event -->
+<div id="m-event" class="modal-wrap hidden">
+  <div class="modal-bg" onclick="closeEventModal()"></div>
+  <div class="modal-box">
+    <h2 class="font-display text-xl font-semibold mb-6" id="em-title">New Competition</h2>
+    <div class="flex flex-col gap-4">
+      <div>
+        <label class="form-label">Event Name *</label>
+        <input class="inp" id="em-name" placeholder="Spring Showcase 2025" />
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="form-label">Date</label>
+          <input type="date" class="inp" id="em-date" />
+        </div>
+        <div>
+          <label class="form-label">Venue</label>
+          <input class="inp" id="em-venue" placeholder="City Arts Center" />
+        </div>
+      </div>
+      <div>
+        <label class="form-label">Notes / Description</label>
+        <textarea class="inp" id="em-desc" rows="2" placeholder="Parking info, dress code…"></textarea>
+      </div>
+    </div>
+    <div class="flex justify-end gap-2 mt-6">
+      <button class="btn-ghost btn-sm" onclick="closeEventModal()">Cancel</button>
+      <button class="btn-gold btn-sm" onclick="saveEvent()">Save Event</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Routine -->
+<div id="m-routine" class="modal-wrap hidden">
+  <div class="modal-bg" onclick="closeRoutineModal()"></div>
+  <div class="modal-box">
+    <h2 class="font-display text-xl font-semibold mb-6" id="rm-title">Add Routine</h2>
+    <div class="flex flex-col gap-4">
+      <div>
+        <label class="form-label">Dancer Name *</label>
+        <input class="inp" id="rm-name" placeholder="First Last" />
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="form-label">Studio</label>
+          <input class="inp" id="rm-studio" placeholder="Studio Name" />
+        </div>
+        <div>
+          <label class="form-label">Age</label>
+          <input type="number" class="inp" id="rm-age" placeholder="12" min="1" max="99" />
+        </div>
+        <div>
+          <label class="form-label">Dance Style</label>
+          <select class="inp" id="rm-style">
+            <option value="">— Select —</option>
+            <option>Ballet</option><option>Jazz</option><option>Hip Hop</option>
+            <option>Contemporary</option><option>Lyrical</option><option>Tap</option>
+            <option>Acro</option><option>Musical Theater</option><option>Other</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Order #</label>
+          <input type="number" class="inp" id="rm-order" placeholder="5" min="1" />
+        </div>
+        <div>
+          <label class="form-label">Scheduled Time *</label>
+          <input type="datetime-local" class="inp" id="rm-time" />
+        </div>
+        <div>
+          <label class="form-label">Stage / Room</label>
+          <input class="inp" id="rm-stage" placeholder="Main Stage" />
+        </div>
+      </div>
+      <div>
+        <label class="form-label">Notes</label>
+        <textarea class="inp" id="rm-notes" rows="2" placeholder="Costume, warm-up time…"></textarea>
+      </div>
+      <div>
+        <label class="form-label">Awards</label>
+        <div class="flex gap-2 mb-2">
+          <select class="inp" id="rm-award-level" style="flex:1">
+            <option value="">— Level —</option>
+            <option value="Platinum">🏆 Platinum</option>
+            <option value="High Gold">🥇 High Gold</option>
+            <option value="Gold">🥇 Gold</option>
+            <option value="High Silver">🥈 High Silver</option>
+            <option value="Silver">🥈 Silver</option>
+            <option value="High Bronze">🥉 High Bronze</option>
+            <option value="Bronze">🥉 Bronze</option>
+            <option value="Custom">✨ Custom</option>
+          </select>
+          <input class="inp" id="rm-award-title" placeholder="e.g. Best Costume, Overall…" style="flex:2" />
+          <button type="button" class="btn-ghost btn-sm shrink-0" onclick="addAwardToList()">+ Add</button>
+        </div>
+        <div id="rm-awards-list" class="flex flex-col gap-2"></div>
+      </div>
+    </div>
+    <div class="flex justify-end gap-2 mt-6">
+      <button class="btn-ghost btn-sm" onclick="closeRoutineModal()">Cancel</button>
+      <button class="btn-gold btn-sm" onclick="saveRoutine()">Save Routine</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Media Viewer -->
+<div id="m-viewer" class="modal-wrap hidden" onclick="closeViewer()">
+  <div class="modal-bg"></div>
+  <div class="relative z-10 flex flex-col items-center gap-3 w-full max-w-4xl" onclick="event.stopPropagation()">
+    <button onclick="closeViewer()" class="btn-icon self-end">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+    <div id="viewer-cnt" class="w-full flex justify-center"></div>
+    <p id="viewer-cap" class="text-ghost text-sm text-center max-w-lg"></p>
+    <p id="viewer-by" class="text-ghost/50 text-xs text-center"></p>
+    <div class="flex items-center gap-3">
+      <button class="btn-icon" onclick="stepViewer(-1)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <span id="viewer-pg" class="text-ghost text-xs px-2"></span>
+      <button class="btn-icon" onclick="stepViewer(1)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+// ─── Registry ─────────────────────────────────────────────────────────────────
+const R = {};
+function reg(obj){ const k='r'+Math.random().toString(36).slice(2); R[k]=obj; return k; }
+function r(k){ return R[k]; }
+
+// ─── State ────────────────────────────────────────────────────────────────────
+const S = {
+  view:'home', events:[], currentEvent:null,
+  routines:[], media:[], settings:{},
+  tab:'schedule', editEventId:null, editRoutineId:null,
+  viewerMedia:[], viewerIdx:0,
+  shareKey: null,  // token or slug for current share view
+  shifting: false  // true while a schedule shift is in progress
+};
+
+// ─── API ──────────────────────────────────────────────────────────────────────
+async function apiFetch(method, url, body){
+  const opts = {method, headers:{'Content-Type':'application/json'}};
+  if(body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  return res.json();
+}
+async function apiUpload(url, formData){
+  const res = await fetch(url, {method:'POST', body:formData});
+  return res.json();
+}
+
+// ─── Formatters ───────────────────────────────────────────────────────────────
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtTime(iso){ if(!iso) return '—'; return new Date(iso).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}); }
+function fmtDate(iso){
+  if(!iso) return '';
+  const [y,m,d] = iso.split('T')[0].split('-');
+  return new Date(+y,+m-1,+d).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+}
+function toLocalInput(iso){
+  if(!iso) return '';
+  const d=new Date(iso);
+  const p=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function fmtSize(bytes){
+  if(bytes>1073741824) return (bytes/1073741824).toFixed(1)+'GB';
+  if(bytes>1048576)    return (bytes/1048576).toFixed(1)+'MB';
+  return (bytes/1024).toFixed(0)+'KB';
+}
+function styleBadge(s){
+  const map={Ballet:'ballet',Jazz:'jazz','Hip Hop':'hiphop',Contemporary:'contemp',
+             Lyrical:'lyrical',Tap:'tap',Acro:'acro','Musical Theater':'musical'};
+  return `<span class="badge b-${map[s]||'default'}">${esc(s)}</span>`;
+}
+function stagePill(s){
+  if(!s) return '';
+  const palettes=[
+    ['rgba(124,109,232,.15)','#9080e8'],['rgba(232,120,130,.15)','#e87882'],
+    ['rgba(80,200,200,.15)','#60d8e0'],['rgba(93,217,154,.15)','#5dd99a'],
+    ['rgba(217,168,76,.15)','#d9a84c'],['rgba(200,100,80,.15)','#e07060']
+  ];
+  const [bg,col]=palettes[s.charCodeAt(0)%palettes.length];
+  return `<span class="stage-pill" style="background:${bg};color:${col}">${esc(s)}</span>`;
+}
+function awardClass(level){
+  const map={'Platinum':'platinum','High Gold':'high-gold','Gold':'gold',
+    'High Silver':'high-silver','Silver':'silver','High Bronze':'high-bronze','Bronze':'bronze'};
+  return 'award-'+(map[level]||'custom');
+}
+function awardEmoji(level){
+  const map={'Platinum':'🏆','High Gold':'🥇','Gold':'🥇','High Silver':'🥈',
+    'Silver':'🥈','High Bronze':'🥉','Bronze':'🥉','Custom':'✨'};
+  return map[level]||'🏅';
+}
+function awardPills(awards, removable=false){
+  if(!awards||!awards.length) return '';
+  return awards.map((a,i)=>
+    `<span class="award-pill ${awardClass(a.level)}">
+      ${awardEmoji(a.level)} ${esc(a.level)}${a.title?' · '+esc(a.title):''}
+      ${removable?`<span class="award-tag-rm" onclick="removeAward(${i})" title="Remove">✕</span>`:''}
+    </span>`
+  ).join('');
+}
+function countdownChip(iso){
+  if(!iso) return `<span class="chip chip-past">—</span>`;
+  const diff=new Date(iso)-Date.now();
+  if(diff<-600000) return `<span class="chip chip-past">${esc(fmtTime(iso))}</span>`;
+  if(diff>=-600000&&diff<=600000) return `<span class="chip chip-live">ON NOW</span>`;
+  if(diff>0&&diff<86400000){
+    const h=Math.floor(diff/3600000),m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);
+    return `<span class="chip chip-soon" data-cd="${esc(iso)}">${h?h+'h ':''} ${m}m ${s}s</span>`;
+  }
+  return `<span class="chip chip-past">${esc(fmtTime(iso))}</span>`;
+}
+function isToday(iso){ return iso&&new Date(iso).toDateString()===new Date().toDateString(); }
+
+// ─── Countdown ticker ─────────────────────────────────────────────────────────
+setInterval(()=>{
+  document.querySelectorAll('[data-cd]').forEach(el=>{
+    const diff=new Date(el.dataset.cd)-Date.now();
+    if(diff<=0){el.textContent='ON NOW';el.className='chip chip-live';return;}
+    if(diff>86400000) return;
+    const h=Math.floor(diff/3600000),m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);
+    el.textContent=`${h?h+'h ':''} ${m}m ${s}s`;
+  });
+},1000);
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function toast(msg,type='info'){
+  const el=document.createElement('div');
+  el.className=`toast t-${type} pointer-events-auto`;
+  el.textContent=msg;
+  const c=document.getElementById('toasts');
+  c.appendChild(el);
+  setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity .4s';setTimeout(()=>el.remove(),400);},3800);
+}
+
+// ─── Alert banner ─────────────────────────────────────────────────────────────
+let alertTimer;
+function showAlert(d){
+  document.getElementById('ab-name').textContent=`${d.dancerName} performs in 15 minutes!`;
+  document.getElementById('ab-detail').textContent=`${d.danceStyle||'Routine'} · ${d.stage||''} · ${fmtTime(d.scheduledTime)}${d.eventName?' · '+d.eventName:''}`;
+  document.getElementById('alert-bar').classList.remove('hidden');
+  clearTimeout(alertTimer);
+  alertTimer=setTimeout(closeAlert,45000);
+}
+function closeAlert(){ document.getElementById('alert-bar').classList.add('hidden'); }
+
+// ─── Seated alert banner ──────────────────────────────────────────────────────
+let seatedTimer;
+function showSeatedAlert(name, detail) {
+  document.getElementById('sa-name').textContent = `${name} is seated!`;
+  document.getElementById('sa-detail').textContent = detail;
+  const bar = document.getElementById('seated-bar');
+  bar.classList.remove('hidden');
+  clearTimeout(seatedTimer);
+  seatedTimer = setTimeout(() => bar.classList.add('hidden'), 30000);
+}
+function closeSeatedAlert() { document.getElementById('seated-bar').classList.add('hidden'); }
+
+// ─── Socket.io ────────────────────────────────────────────────────────────────
+const socket=io();
+socket.on('data-updated',async()=>{
+  if(S.shifting) return; // local optimistic update already applied
+  if(S.view==='home'){await loadEvents();renderHome();}
+  if(S.view==='event'){await loadEventData(S.currentEvent.id);renderEventView();}
+  if(S.view==='share'){await loadShareView(S.shareKey);}
+});
+socket.on('routine-alert',d=>{ showAlert(d); toast(`⏰ ${d.dancerName} on in 15 min!`,'info'); });
+socket.on('seated-alert', d => {
+  const nextMsg = d.nextRoutine ? ` · Next: ${d.nextRoutine.dancerName}` : '';
+  showSeatedAlert(d.senderName, d.eventName + nextMsg);
+  toast(`🪑 ${d.senderName} is seated!`, 'info');
+});
+
+// ─── Data loaders ─────────────────────────────────────────────────────────────
+async function loadEvents(){ S.events=await apiFetch('GET','/api/events'); }
+async function loadEventData(id){
+  [S.routines,S.media,S.settings]=await Promise.all([
+    apiFetch('GET',`/api/events/${id}/routines`),
+    apiFetch('GET',`/api/events/${id}/media`),
+    apiFetch('GET','/api/settings')
+  ]);
+}
+
+// ─── Navigation ───────────────────────────────────────────────────────────────
+function showView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
+  document.getElementById('view-'+name).classList.remove('hidden');
+}
+function goHome(){
+  S.view='home';S.currentEvent=null;
+  document.getElementById('btn-back').classList.add('hidden');
+  document.getElementById('nav-actions').innerHTML='';
+  showView('home');
+  loadEvents().then(()=>renderHome());
+}
+function goEvent(k){
+  const event=r(k);
+  S.view='event';S.currentEvent=event;S.tab='schedule';
+  document.getElementById('btn-back').classList.remove('hidden');
+  showView('event');
+  loadEventData(event.id).then(()=>renderEventView());
+}
+function switchTab(tab){
+  S.tab=tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.add('hidden'));
+  document.getElementById('tab-'+tab).classList.remove('hidden');
+  if(tab==='schedule') renderSchedule();
+  if(tab==='media')    renderMedia();
+  if(tab==='settings') renderSettings();
+}
+
+// ─── Render: Home ─────────────────────────────────────────────────────────────
+function renderHome(){
+  document.getElementById('nav-actions').innerHTML='';
+  const grid=document.getElementById('events-grid');
+  const empty=document.getElementById('events-empty');
+  if(!S.events.length){grid.innerHTML='';empty.classList.remove('hidden');return;}
+  empty.classList.add('hidden');
+  grid.innerHTML=S.events.map(e=>{
+    const ek=reg(e), dateStr=e.date?fmtDate(e.date+'T12:00'):'Date TBD';
+    const shareKey=e.shareSlug||e.shareToken;
+    return `<div class="event-card" onclick="goEvent('${ek}')">
+      <div class="flex items-start justify-between gap-2 mb-3">
+        <div class="min-w-0">
+          <h3 class="font-display font-semibold text-lg leading-tight text-ink truncate">${esc(e.name)}</h3>
+          <p class="text-ghost text-sm mt-0.5">${dateStr}</p>
+        </div>
+        <div class="flex gap-1 shrink-0">
+          <button class="btn-icon edit" title="Edit" onclick="event.stopPropagation();openEventModal('${reg(e)}')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="btn-icon del" title="Delete" onclick="event.stopPropagation();deleteEvent('${e.id}')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          </button>
+        </div>
+      </div>
+      ${e.venue?`<p class="text-ghost text-xs flex items-center gap-1.5 mb-3">📍 ${esc(e.venue)}</p>`:''}
+      <div class="flex items-center justify-between pt-3 border-t border-edge/40 mt-3">
+        <span class="text-xs text-ghost">Open schedule →</span>
+        <button onclick="event.stopPropagation();copyShare('${shareKey}')"
+          class="text-xs px-3 py-1 rounded-full border border-edge/60 text-ghost hover:text-gold hover:border-gold/30 transition-colors flex items-center gap-1">
+          🔗 Share
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── Render: Event ────────────────────────────────────────────────────────────
+function renderEventView(){
+  const e=S.currentEvent;
+  const shareKey=e.shareSlug||e.shareToken;
+  document.getElementById('nav-actions').innerHTML=`
+    <button class="btn-ghost btn-sm" onclick="copyShare('${shareKey}')">🔗 Share</button>`;
+  document.getElementById('event-hdr').innerHTML=`
+    <div class="flex items-start justify-between flex-wrap gap-3">
+      <div>
+        <h1 class="font-display text-2xl font-bold tracking-wide text-ink">${esc(e.name)}</h1>
+        <div class="flex flex-wrap items-center gap-4 mt-2 text-sm text-ghost">
+          ${e.date?`<span>📅 ${fmtDate(e.date+'T12:00')}</span>`:''}
+          ${e.venue?`<span>📍 ${esc(e.venue)}</span>`:''}
+          <span>${S.routines.length} routine${S.routines.length!==1?'s':''}</span>
+          <span>${S.media.length} media</span>
+        </div>
+        ${e.description?`<p class="text-ghost text-sm mt-2 max-w-xl">${esc(e.description)}</p>`:''}
+      </div>
+    </div>`;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===S.tab));
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.add('hidden'));
+  document.getElementById('tab-'+S.tab).classList.remove('hidden');
+  if(S.tab==='schedule') renderSchedule();
+  if(S.tab==='media')    renderMedia();
+  if(S.tab==='settings') renderSettings();
+}
+
+// ─── Render: Schedule (with shift controls) ───────────────────────────────────
+function renderSchedule(){
+  const el=document.getElementById('tab-schedule');
+  const todayRoutines=S.routines.filter(r=>isToday(r.scheduledTime)&&new Date(r.scheduledTime)>Date.now());
+  const hasRoutines=S.routines.length>0;
+
+  el.innerHTML=`
+    <div class="flex items-start justify-between mb-5 gap-3 flex-wrap">
+      <div class="flex-1 min-w-0">
+        <p class="text-ghost text-sm">${S.routines.length} routine${S.routines.length!==1?'s':''} scheduled</p>
+        ${hasRoutines?`
+        <div class="mt-3 flex flex-col gap-2">
+          <p class="text-xs font-bold uppercase tracking-wider text-ghost">Shift Entire Schedule</p>
+          <div class="flex flex-wrap gap-2">
+            <button class="shift-btn minus" onclick="shiftSchedule(-60)">− 1 hr</button>
+            <button class="shift-btn minus" onclick="shiftSchedule(-15)">− 15 min</button>
+            <button class="shift-btn" onclick="shiftSchedule(15)">+ 15 min</button>
+            <button class="shift-btn" onclick="shiftSchedule(60)">+ 1 hr</button>
+          </div>
+        </div>`:''}
+      </div>
+      <button class="btn-gold btn-sm shrink-0" onclick="openRoutineModal(null)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        Add Routine
+      </button>
+    </div>
+    ${todayRoutines.length?`
+    <div class="glass-light rounded-xl p-4 mb-5 flex items-center gap-3">
+      <span class="text-2xl shrink-0">⏳</span>
+      <div class="min-w-0">
+        <p class="text-sm font-semibold">Today: <span class="text-gold">${esc(todayRoutines[0].dancerName)}</span>${todayRoutines.length>1?` + ${todayRoutines.length-1} more`:''}</p>
+        <p class="text-ghost text-xs mt-0.5">${fmtTime(todayRoutines[0].scheduledTime)}${todayRoutines[0].stage?' · '+todayRoutines[0].stage:''}</p>
+      </div>
+    </div>`:''}
+    ${!hasRoutines?`
+    <div class="text-center py-16">
+      <div class="text-5xl mb-3">🩰</div>
+      <p class="text-ghost font-semibold">No routines yet</p>
+      <p class="text-ghost text-sm mt-1">Add your first routine above</p>
+    </div>`:
+    `<div class="flex flex-col gap-1">${S.routines.map(r=>routineRow(r)).join('')}</div>`}`;
+}
+
+async function shiftSchedule(minutes){
+  if(S.shifting) return;
+  const label = minutes > 0 ? `+${minutes}` : `${minutes}`;
+  const unit  = Math.abs(minutes) === 60 ? 'hour' : 'min';
+  const ms    = minutes * 60 * 1000;
+
+  // Snapshot for rollback
+  const snapshot = S.routines.map(r => ({...r}));
+
+  // 1. Apply optimistically to local state & re-render immediately
+  S.shifting = true;
+  S.routines = S.routines.map(r => {
+    if(!r.scheduledTime) return r;
+    return {...r, scheduledTime: new Date(new Date(r.scheduledTime).getTime() + ms).toISOString()};
+  });
+  renderSchedule();
+
+  // 2. Confirm with server
+  try {
+    const result = await apiFetch('POST', `/api/events/${S.currentEvent.id}/shift`, {minutes});
+    if(result.ok){
+      toast(`⏱ Shifted ${label} ${unit} — ${result.changed} routine${result.changed!==1?'s':''} updated`, 'success');
+    } else {
+      // Rollback
+      S.routines = snapshot;
+      renderSchedule();
+      toast(result.error || 'Shift failed', 'error');
+    }
+  } catch(e) {
+    S.routines = snapshot;
+    renderSchedule();
+    toast('Shift failed — please try again', 'error');
+  } finally {
+    S.shifting = false;
+  }
+}
+
+function routineRow(r){
+  const today=isToday(r.scheduledTime);
+  const diff=r.scheduledTime?new Date(r.scheduledTime)-Date.now():null;
+  const onNow=diff!==null&&diff>=-600000&&diff<=600000;
+  const rk=reg(r);
+  return `<div class="r-row${onNow?' on-now':''}">
+    <div class="text-center shrink-0">
+      ${today?countdownChip(r.scheduledTime):`<span class="font-bold text-gold text-sm">${fmtTime(r.scheduledTime)}</span>`}
+      ${r.orderNumber?`<div class="text-xs text-ghost mt-1">#${r.orderNumber}</div>`:''}
+    </div>
+    <div class="min-w-0">
+      <div class="font-semibold text-ink leading-tight">${esc(r.dancerName)}</div>
+      <div class="flex flex-wrap items-center gap-2 mt-1">
+        ${r.studio?`<span class="text-xs text-ghost">${esc(r.studio)}</span>`:''}
+        ${r.age?`<span class="text-xs text-ghost/60">·</span><span class="text-xs text-ghost">Age ${r.age}</span>`:''}
+        ${r.danceStyle?styleBadge(r.danceStyle):''}
+        ${r.stage?stagePill(r.stage):''}
+      </div>
+      ${r.awards&&r.awards.length?`<div class="flex flex-wrap gap-1 mt-2">${awardPills(r.awards)}</div>`:''}
+      ${r.notes?`<p class="text-xs text-ghost mt-1 truncate italic">${esc(r.notes)}</p>`:''}
+    </div>
+    <div class="r-actions flex items-center gap-1.5 shrink-0">
+      <button class="btn-icon edit" onclick="openRoutineModal('${rk}')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
+      <button class="btn-icon del" onclick="deleteRoutine('${r.id}')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+      </button>
+    </div>
+  </div>`;
+}
+
+// ─── Render: Media ────────────────────────────────────────────────────────────
+function renderMedia(){
+  const el=document.getElementById('tab-media');
+  el.innerHTML=`
+    <div class="upload-zone mb-6" id="upload-zone"
+      onclick="document.getElementById('file-inp').click()"
+      ondragover="event.preventDefault();this.classList.add('drag-over')"
+      ondragleave="this.classList.remove('drag-over')"
+      ondrop="handleDrop(event)">
+      <input type="file" id="file-inp" class="hidden" accept="image/*,video/*" multiple onchange="uploadFiles(this.files,'admin')" />
+      <div class="text-4xl mb-2">📸</div>
+      <p class="font-semibold">Drop photos &amp; videos here</p>
+      <p class="text-ghost text-sm mt-1">or click to browse · up to 2GB per file</p>
+      <div id="upload-prog" class="hidden mt-5">
+        <div class="h-1.5 bg-edge rounded-full overflow-hidden w-48 mx-auto">
+          <div id="prog-bar" class="h-full rounded-full transition-all" style="background:#d9a84c;width:0%"></div>
+        </div>
+        <p id="prog-txt" class="text-xs text-ghost mt-2"></p>
+      </div>
+    </div>
+    ${!S.media.length?`<div class="text-center py-12 text-ghost">
+      <p class="text-5xl mb-3">🎬</p>
+      <p class="font-semibold">No media yet</p>
+      <p class="text-sm mt-1">Upload photos &amp; videos to share with everyone</p>
+    </div>`:
+    `<div class="media-grid">${S.media.map((m,i)=>mediaCard(m,i,'admin')).join('')}</div>`}`;
+}
+
+function mediaCard(m,i,mode){
+  const src=`/uploads/${m.filename}`;
+  const isVid=m.type==='video';
+  const byLabel=m.uploadedBy&&m.uploadedBy!=='Host'?`<span class="uploader-tag">${esc(m.uploadedBy)}</span>`:'';
+  return `<div class="media-card" onclick="openViewer(${i})">
+    ${isVid
+      ?`<video src="${src}" preload="metadata" muted class="w-full h-full object-cover"></video>
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div class="w-10 h-10 rounded-full bg-black/60 flex items-center justify-center">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </div>
+        </div>`
+      :`<img src="${src}" alt="${esc(m.caption||m.originalName)}" loading="lazy" />`}
+    <div class="media-over"></div>
+    <div class="absolute bottom-0 left-0 right-0 p-2 flex items-end justify-between">
+      ${byLabel}
+      ${mode==='admin'?`<button onclick="event.stopPropagation();deleteMedia('${m.id}')"
+        class="text-white/50 hover:text-red-400 transition-colors p-1 ml-auto">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+        </svg></button>`:''}
+    </div>
+  </div>`;
+}
+
+// ─── Render: Settings ─────────────────────────────────────────────────────────
+function renderSettings(){
+  const el=document.getElementById('tab-settings');
+  const cfg=S.settings.configured;
+  const e=S.currentEvent;
+  const shareKey=e.shareSlug||e.shareToken;
+  const shareUrl=`${location.origin}/share/${shareKey}`;
+  const origin=location.origin;
+
+  el.innerHTML=`
+    <div class="max-w-lg flex flex-col gap-4">
+
+      <!-- Share link + custom slug -->
+      <div class="glass rounded-xl p-6">
+        <h3 class="font-semibold mb-1">🔗 Public Share Link</h3>
+        <p class="text-ghost text-xs mb-4">Anyone with this link can view the schedule and upload media</p>
+        <div class="flex gap-2 mb-3">
+          <input class="inp text-sm" readonly id="share-url" value="${esc(shareUrl)}" onclick="this.select()" />
+          <button class="btn-gold btn-sm shrink-0" onclick="copyShare('${shareKey}')">Copy</button>
+        </div>
+        <a href="${shareUrl}" target="_blank"
+          class="text-xs inline-flex items-center gap-1 hover:underline mb-5" style="color:#9080e8">
+          ↗ Preview share page
+        </a>
+
+        <div class="border-t border-edge/40 pt-4 mt-1">
+          <label class="form-label">Custom URL Slug
+            <span class="normal-case font-normal text-ghost/60 ml-1">(optional)</span>
+          </label>
+          <p class="text-ghost text-xs mb-3">Create a short, memorable link instead of the random token</p>
+          <div class="flex">
+            <div class="slug-prefix">${esc(origin)}/share/</div>
+            <input class="inp slug-input" id="slug-inp" placeholder="spring-showcase-2025"
+              value="${esc(e.shareSlug||'')}"
+              oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'-')" />
+          </div>
+          <div class="flex items-center gap-2 mt-3">
+            <button class="btn-gold btn-sm" onclick="saveSlug()">Save Slug</button>
+            ${e.shareSlug?`<button class="btn-ghost btn-sm" onclick="clearSlug()">Clear (use token)</button>`:''}
+          </div>
+        </div>
+      </div>
+
+      <!-- Pushover -->
+      <div class="glass rounded-xl p-6">
+        <div class="flex items-start gap-3 mb-5">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style="background:rgba(217,168,76,.15)">
+            <span class="text-xl">🔔</span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="font-semibold">Pushover Notifications</h3>
+              <span class="badge ${cfg?'b-hiphop':'b-default'}">${cfg?'✓ Active':'Not set'}</span>
+            </div>
+            <p class="text-ghost text-xs mt-0.5">Mobile alerts 15 min before each routine</p>
+          </div>
+        </div>
+        <div class="flex flex-col gap-3">
+          <div>
+            <label class="form-label">App Token
+              <a href="https://pushover.net/apps/build" target="_blank" style="color:#9080e8" class="normal-case font-normal ml-1">Register app →</a>
+            </label>
+            <input class="inp" id="s-token" placeholder="${cfg?'●●●●●●●● (saved)':'a1b2c3d4e5f6...'}" value="${esc(S.settings.pushoverToken||'')}" />
+          </div>
+          <div>
+            <label class="form-label">Your User Key</label>
+            <input class="inp" id="s-user" placeholder="uQiRzpo4DXghDmr9..." value="${esc(S.settings.pushoverUser||'')}" />
+          </div>
+          <div class="flex gap-2 mt-1">
+            <button class="btn-gold btn-sm" onclick="saveSettings()">Save</button>
+            ${cfg?`<button class="btn-ghost btn-sm" onclick="testPush()">Send Test →</button>`:''}
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ─── Custom slug ──────────────────────────────────────────────────────────────
+async function saveSlug(){
+  const slug=document.getElementById('slug-inp').value.trim();
+  const result=await apiFetch('PUT',`/api/events/${S.currentEvent.id}`,{shareSlug:slug});
+  if(result.error){ toast(result.error,'error'); return; }
+  S.currentEvent=result;
+  // Update the events list too
+  const i=S.events.findIndex(e=>e.id===result.id);
+  if(i>=0) S.events[i]=result;
+  toast(slug?`Slug saved: /share/${slug}`:'Slug cleared','success');
+  renderSettings();
+  // Update nav share button
+  const shareKey=result.shareSlug||result.shareToken;
+  document.getElementById('nav-actions').innerHTML=`
+    <button class="btn-ghost btn-sm" onclick="copyShare('${shareKey}')">🔗 Share</button>`;
+}
+async function clearSlug(){
+  const result=await apiFetch('PUT',`/api/events/${S.currentEvent.id}`,{shareSlug:''});
+  if(result.error){toast(result.error,'error');return;}
+  S.currentEvent=result;
+  toast('Custom slug cleared','info');
+  renderSettings();
+}
+
+// ─── Share view (public) ──────────────────────────────────────────────────────
+async function loadShareView(key){
+  S.view='share';
+  S.shareKey=key;
+  document.getElementById('btn-back').classList.add('hidden');
+  document.getElementById('nav-actions').innerHTML='';
+  showView('share');
+  try {
+    const {event:e,routines,media}=await apiFetch('GET',`/api/share/${key}`);
+    S.viewerMedia=media;
+    const el=document.getElementById('view-share');
+    el.innerHTML=`
+      <div style="background:linear-gradient(135deg,#0c0e1f 0%,#14162e 100%);
+        border-bottom:1px solid rgba(255,255,255,.06);padding:52px 24px 36px;text-align:center">
+        <div class="font-display text-xs font-semibold tracking-widest text-ghost uppercase mb-3">Competition Program</div>
+        <h1 class="font-display text-3xl font-bold tracking-wide">${esc(e.name)}</h1>
+        <div class="flex flex-wrap justify-center gap-5 mt-3 text-sm text-ghost">
+          ${e.date?`<span>📅 ${fmtDate(e.date+'T12:00')}</span>`:''}
+          ${e.venue?`<span>📍 ${esc(e.venue)}</span>`:''}
+          <span>${routines.length} Routine${routines.length!==1?'s':''}</span>
+        </div>
+        ${e.description?`<p class="text-ghost text-sm mt-3 max-w-lg mx-auto">${esc(e.description)}</p>`:''}
+      </div>
+
+      <div class="max-w-3xl mx-auto px-4 py-10">
+
+        <!-- Schedule -->
+        <h2 class="font-display text-xl font-bold tracking-wide mb-5" style="color:#d9a84c">Schedule</h2>
+        ${!routines.length?`<p class="text-ghost text-center py-8">No routines scheduled yet.</p>`:
+          `<div class="flex flex-col gap-2 mb-10">
+            ${routines.map(r=>`
+              <div class="glass r-row rounded-xl">
+                <div class="text-center shrink-0">
+                  ${isToday(r.scheduledTime)?countdownChip(r.scheduledTime):`<span class="font-bold text-gold text-sm">${fmtTime(r.scheduledTime)}</span>`}
+                  ${r.orderNumber?`<div class="text-xs text-ghost mt-1">#${r.orderNumber}</div>`:''}
+                </div>
+                <div class="min-w-0">
+                  <div class="font-semibold leading-tight">${esc(r.dancerName)}</div>
+                  <div class="flex flex-wrap items-center gap-2 mt-1">
+                    ${r.studio?`<span class="text-xs text-ghost">${esc(r.studio)}</span>`:''}
+                    ${r.age?`<span class="text-xs text-ghost">Age ${r.age}</span>`:''}
+                    ${r.danceStyle?styleBadge(r.danceStyle):''}
+                    ${r.stage?stagePill(r.stage):''}
+                  </div>
+                  ${r.awards&&r.awards.length?`<div class="flex flex-wrap gap-1 mt-2">${awardPills(r.awards)}</div>`:''}
+                </div>
+              </div>`).join('')}
+          </div>`}
+
+        <!-- Seated notification button -->
+        <div class="glass rounded-xl p-6 mb-8 text-center" id="seated-section">
+          <p class="text-ghost text-sm mb-4">Let everyone know you've found your seat</p>
+          <div class="mb-4">
+            <input class="inp text-center text-sm" id="seated-name" placeholder="Your name (e.g. Mom, Dad)" style="max-width:260px;margin:0 auto;" />
+          </div>
+          <button id="seated-btn" onclick="sendSeatedAlert('${key}')"
+            class="btn-gold" style="font-size:16px;padding:14px 32px;border-radius:12px;">
+            🪑 I'm in my seat!
+          </button>
+          <p id="seated-confirm" class="hidden text-sm mt-3" style="color:#9080e8">✓ Notification sent!</p>
+        </div>
+
+        <!-- Public upload -->
+        <h2 class="font-display text-xl font-bold tracking-wide mb-2" style="color:#d9a84c">Share Photos &amp; Videos</h2>
+        <p class="text-ghost text-sm mb-5">Upload your own photos and videos to share with everyone</p>
+        <div class="glass-light rounded-xl p-5 mb-8">
+          <div class="mb-3">
+            <label class="form-label">Your Name</label>
+            <input class="inp" id="pub-name" placeholder="Jane Smith" />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Caption (optional)</label>
+            <input class="inp" id="pub-caption" placeholder="Emma's jazz solo 💃" />
+          </div>
+          <div class="upload-zone-sm" id="pub-upload-zone"
+            onclick="document.getElementById('pub-file-inp').click()"
+            ondragover="event.preventDefault();this.classList.add('drag-over')"
+            ondragleave="this.classList.remove('drag-over')"
+            ondrop="handleShareDrop(event,'${key}')">
+            <input type="file" id="pub-file-inp" class="hidden" accept="image/*,video/*" multiple
+              onchange="shareUploadFiles(this.files,'${key}')" />
+            <div class="text-3xl mb-2">📤</div>
+            <p class="font-medium text-sm">Drop files or click to browse</p>
+            <p class="text-ghost text-xs mt-1">Images &amp; videos · up to 2GB each</p>
+          </div>
+          <div id="pub-prog" class="hidden mt-4 text-center">
+            <div class="h-1.5 bg-edge rounded-full overflow-hidden w-48 mx-auto">
+              <div id="pub-prog-bar" class="h-full rounded-full transition-all" style="background:#7c6de8;width:0%"></div>
+            </div>
+            <p id="pub-prog-txt" class="text-xs text-ghost mt-2"></p>
+          </div>
+        </div>
+
+        <!-- Media gallery -->
+        ${media.length?`
+        <h2 class="font-display text-xl font-bold tracking-wide mb-5" style="color:#d9a84c">Gallery</h2>
+        <div class="media-grid mb-12">
+          ${media.map((m,i)=>{
+            const src=`/uploads/${m.filename}`;
+            const isVid=m.type==='video';
+            const by=m.uploadedBy&&m.uploadedBy!=='Host'?`<span class="uploader-tag">${esc(m.uploadedBy)}</span>`:'';
+            return `<div class="media-card" onclick="openShareViewer(${i})">
+              ${isVid
+                ?`<video src="${src}" preload="metadata" muted class="w-full h-full object-cover"></video>
+                  <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div class="w-10 h-10 rounded-full bg-black/60 flex items-center justify-center">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    </div>
+                  </div>`
+                :`<img src="${src}" alt="${esc(m.caption||m.originalName)}" loading="lazy" />`}
+              <div class="media-over"></div>
+              ${by?`<div class="absolute bottom-0 left-0 right-0 p-2">${by}</div>`:''}
+            </div>`;
+          }).join('')}
+        </div>`:''}
+
+        <div class="text-center pt-8 border-t border-edge/30">
+          <span class="font-display text-sm text-ghost tracking-widest">STAGECALL</span>
+        </div>
+      </div>`;
+  } catch(err){
+    document.getElementById('view-share').innerHTML=`
+      <div class="text-center py-24">
+        <div class="text-6xl mb-4">🎭</div>
+        <p class="font-display text-xl text-ghost">Event not found or link expired.</p>
+        <a href="/" class="btn-ghost mt-6 inline-flex">Go to StageCall</a>
+      </div>`;
+  }
+}
+
+// Public upload handlers
+function handleShareDrop(e,key){
+  e.preventDefault();
+  document.getElementById('pub-upload-zone').classList.remove('drag-over');
+  shareUploadFiles(e.dataTransfer.files,key);
+}
+async function shareUploadFiles(files,key){
+  const arr=Array.from(files); if(!arr.length) return;
+  const uploaderName=(document.getElementById('pub-name')?.value.trim())||'Guest';
+  const caption=(document.getElementById('pub-caption')?.value.trim())||'';
+  const prog=document.getElementById('pub-prog');
+  const bar=document.getElementById('pub-prog-bar');
+  const txt=document.getElementById('pub-prog-txt');
+  prog.classList.remove('hidden');
+  let uploaded=0;
+  for(let i=0;i<arr.length;i++){
+    txt.textContent=`Uploading ${i+1} of ${arr.length}: ${arr[i].name}`;
+    bar.style.width=`${Math.round(i/arr.length*100)}%`;
+    const fd=new FormData();
+    fd.append('file',arr[i]);
+    fd.append('uploaderName',uploaderName);
+    fd.append('caption',i===0?caption:'');
+    try{
+      const item=await apiUpload(`/api/share/${key}/media`,fd);
+      if(item.id) uploaded++;
+    }catch(e){ toast(`Failed: ${arr[i].name}`,'error'); }
+  }
+  bar.style.width='100%';
+  txt.textContent=`✓ ${uploaded} file${uploaded!==1?'s':''} uploaded!`;
+  setTimeout(()=>prog.classList.add('hidden'),3000);
+  toast(`${uploaded} file${uploaded!==1?'s':''} shared! 🎉`,'success');
+  // Reload the share view to show new media
+  await loadShareView(key);
+}
+
+// ─── Media viewer ─────────────────────────────────────────────────────────────
+function openViewer(i){ S.viewerMedia=S.media; S.viewerIdx=i; _showViewer(); }
+function openShareViewer(i){ S.viewerIdx=i; _showViewer(); }
+function closeViewer(){ document.getElementById('m-viewer').classList.add('hidden'); }
+function stepViewer(dir){
+  S.viewerIdx=(S.viewerIdx+dir+S.viewerMedia.length)%S.viewerMedia.length;
+  _showViewer();
+}
+function _showViewer(){
+  const m=S.viewerMedia[S.viewerIdx];
+  if(!m) return;
+  const src=`/uploads/${m.filename}`;
+  document.getElementById('viewer-cnt').innerHTML=
+    m.type==='video'
+      ?`<video src="${src}" controls class="viewer-media" style="max-height:72vh"></video>`
+      :`<img src="${src}" alt="${esc(m.caption||m.originalName)}" class="viewer-media" />`;
+  document.getElementById('viewer-cap').textContent=m.caption||m.originalName;
+  document.getElementById('viewer-by').textContent=m.uploadedBy&&m.uploadedBy!=='Host'?`Uploaded by ${m.uploadedBy}`:'';
+  document.getElementById('viewer-pg').textContent=`${S.viewerIdx+1} / ${S.viewerMedia.length}`;
+  document.getElementById('m-viewer').classList.remove('hidden');
+}
+
+// ─── Admin file upload ────────────────────────────────────────────────────────
+function handleDrop(e){
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag-over');
+  uploadFiles(e.dataTransfer.files,'admin');
+}
+async function uploadFiles(files,mode){
+  const arr=Array.from(files); if(!arr.length) return;
+  const prog=document.getElementById('upload-prog');
+  const bar=document.getElementById('prog-bar');
+  const txt=document.getElementById('prog-txt');
+  prog.classList.remove('hidden');
+  for(let i=0;i<arr.length;i++){
+    txt.textContent=`Uploading ${i+1} of ${arr.length}: ${arr[i].name}`;
+    bar.style.width=`${Math.round(i/arr.length*100)}%`;
+    const fd=new FormData(); fd.append('file',arr[i]);
+    try{
+      const item=await apiUpload(`/api/events/${S.currentEvent.id}/media`,fd);
+      if(item.id) S.media.unshift(item);
+    }catch(e){ toast(`Failed: ${arr[i].name}`,'error'); }
+  }
+  bar.style.width='100%';
+  txt.textContent=`✓ ${arr.length} file${arr.length!==1?'s':''} uploaded`;
+  setTimeout(()=>{prog.classList.add('hidden');bar.style.width='0%';},2500);
+  renderMedia();
+  toast(`Uploaded ${arr.length} file${arr.length!==1?'s':''}!`,'success');
+}
+
+// ─── Event modal ──────────────────────────────────────────────────────────────
+function openEventModal(k){
+  const ev=k?r(k):null;
+  S.editEventId=ev?ev.id:null;
+  document.getElementById('em-title').textContent=ev?'Edit Event':'New Competition';
+  document.getElementById('em-name').value=ev?ev.name:'';
+  document.getElementById('em-date').value=ev?ev.date||'':'';
+  document.getElementById('em-venue').value=ev?ev.venue||'':'';
+  document.getElementById('em-desc').value=ev?ev.description||'':'';
+  document.getElementById('m-event').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('em-name').focus(),50);
+}
+function closeEventModal(){ document.getElementById('m-event').classList.add('hidden'); }
+async function saveEvent(){
+  const name=document.getElementById('em-name').value.trim();
+  if(!name){ toast('Event name is required','error'); return; }
+  const body={name,date:document.getElementById('em-date').value,
+    venue:document.getElementById('em-venue').value.trim(),
+    description:document.getElementById('em-desc').value.trim()};
+  if(S.editEventId){ await apiFetch('PUT',`/api/events/${S.editEventId}`,body); toast('Event updated','success'); }
+  else { await apiFetch('POST','/api/events',body); toast('Event created!','success'); }
+  closeEventModal();
+  await loadEvents(); renderHome();
+}
+async function deleteEvent(id){
+  if(!confirm('Delete this event and all its routines and media?')) return;
+  await apiFetch('DELETE',`/api/events/${id}`);
+  toast('Event deleted','info');
+  await loadEvents(); renderHome();
+}
+
+// ─── Routine modal ────────────────────────────────────────────────────────────
+// ─── Award list state (temporary during modal editing) ────────────────────────
+let _pendingAwards = [];
+
+function addAwardToList(){
+  const level = document.getElementById('rm-award-level').value;
+  const title = document.getElementById('rm-award-title').value.trim();
+  if(!level){ return; }
+  _pendingAwards.push({ level, title });
+  document.getElementById('rm-award-level').value = '';
+  document.getElementById('rm-award-title').value = '';
+  renderAwardsList();
+}
+function removeAward(i){
+  _pendingAwards.splice(i, 1);
+  renderAwardsList();
+}
+function renderAwardsList(){
+  const el = document.getElementById('rm-awards-list');
+  if(!el) return;
+  if(!_pendingAwards.length){ el.innerHTML=''; return; }
+  el.innerHTML = _pendingAwards.map((a,i)=>`
+    <div class="award-entry">
+      <span class="award-pill ${awardClass(a.level)}">${awardEmoji(a.level)} ${esc(a.level)}${a.title?' · '+esc(a.title):''}</span>
+      <button type="button" onclick="removeAward(${i})" class="ml-auto text-ghost hover:text-bloom transition-colors text-sm">✕</button>
+    </div>`).join('');
+}
+
+function openRoutineModal(k){
+  const rt=k?r(k):null;
+  S.editRoutineId=rt?rt.id:null;
+  document.getElementById('rm-title').textContent=rt?'Edit Routine':'Add Routine';
+  document.getElementById('rm-name').value=rt?rt.dancerName:'';
+  document.getElementById('rm-studio').value=rt?rt.studio||'':'';
+  document.getElementById('rm-age').value=rt?rt.age||'':'';
+  document.getElementById('rm-style').value=rt?rt.danceStyle||'':'';
+  document.getElementById('rm-order').value=rt?rt.orderNumber||'':'';
+  document.getElementById('rm-stage').value=rt?rt.stage||'':'';
+  document.getElementById('rm-notes').value=rt?rt.notes||'':'';
+  if(rt&&rt.scheduledTime) document.getElementById('rm-time').value=toLocalInput(rt.scheduledTime);
+  else if(S.currentEvent&&S.currentEvent.date) document.getElementById('rm-time').value=S.currentEvent.date+'T10:00';
+  else document.getElementById('rm-time').value='';
+  _pendingAwards = rt && rt.awards ? rt.awards.map(a=>({...a})) : [];
+  renderAwardsList();
+  document.getElementById('m-routine').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('rm-name').focus(),50);
+}
+function closeRoutineModal(){ document.getElementById('m-routine').classList.add('hidden'); }
+async function saveRoutine(){
+  const name=document.getElementById('rm-name').value.trim();
+  if(!name){ toast('Dancer name is required','error'); return; }
+  const timeVal=document.getElementById('rm-time').value;
+  const body={dancerName:name,studio:document.getElementById('rm-studio').value.trim(),
+    age:document.getElementById('rm-age').value,danceStyle:document.getElementById('rm-style').value,
+    scheduledTime:timeVal?new Date(timeVal).toISOString():'',
+    stage:document.getElementById('rm-stage').value.trim(),
+    orderNumber:document.getElementById('rm-order').value,
+    notes:document.getElementById('rm-notes').value.trim(), awards:[..._pendingAwards]};
+  if(S.editRoutineId){ await apiFetch('PUT',`/api/routines/${S.editRoutineId}`,body); toast('Routine updated','success'); }
+  else { await apiFetch('POST',`/api/events/${S.currentEvent.id}/routines`,body); toast('Routine added!','success'); }
+  closeRoutineModal();
+  S.routines=await apiFetch('GET',`/api/events/${S.currentEvent.id}/routines`);
+  renderSchedule();
+}
+async function deleteRoutine(id){
+  if(!confirm('Remove this routine?')) return;
+  await apiFetch('DELETE',`/api/routines/${id}`);
+  S.routines=S.routines.filter(r=>r.id!==id);
+  renderSchedule(); toast('Routine removed','info');
+}
+async function deleteMedia(id){
+  await apiFetch('DELETE',`/api/media/${id}`);
+  S.media=S.media.filter(m=>m.id!==id);
+  renderMedia(); toast('Deleted','info');
+}
+
+// ─── Settings ─────────────────────────────────────────────────────────────────
+async function saveSettings(){
+  const token=document.getElementById('s-token').value.trim();
+  const user=document.getElementById('s-user').value.trim();
+  await apiFetch('PUT','/api/settings',{pushoverToken:token,pushoverUser:user});
+  S.settings=await apiFetch('GET','/api/settings');
+  toast('Settings saved!','success');
+  renderSettings();
+}
+async function testPush(){
+  const r=await apiFetch('POST','/api/settings/test',{});
+  if(r.ok) toast('Test sent! Check your phone.','success');
+  else toast('Error: '+(r.error||'Check token & user key'),'error');
+}
+
+// ─── Share link copy ──────────────────────────────────────────────────────────
+function copyShare(key){
+  const url=`${location.origin}/share/${key}`;
+  navigator.clipboard.writeText(url).then(()=>toast('Share link copied!','success'))
+    .catch(()=>{ prompt('Copy this link:',url); });
+}
+
+// ─── Keyboard ─────────────────────────────────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){ closeEventModal(); closeRoutineModal(); closeViewer(); }
+  if(!document.getElementById('m-viewer').classList.contains('hidden')){
+    if(e.key==='ArrowLeft') stepViewer(-1);
+    if(e.key==='ArrowRight') stepViewer(1);
+  }
+});
+
+// ─── Seated alert ────────────────────────────────────────────────────────────
+async function sendSeatedAlert(key) {
+  const nameEl = document.getElementById('seated-name');
+  const btn = document.getElementById('seated-btn');
+  const confirm = document.getElementById('seated-confirm');
+  const senderName = nameEl ? nameEl.value.trim() || 'Someone' : 'Someone';
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  try {
+    const result = await apiFetch('POST', `/api/share/${key}/seated`, { senderName });
+    if (result.ok) {
+      btn.textContent = '✓ Sent!';
+      btn.style.opacity = '0.6';
+      confirm.classList.remove('hidden');
+      setTimeout(() => {
+        btn.textContent = "🪑 I'm in my seat!";
+        btn.disabled = false;
+        btn.style.opacity = '';
+        confirm.classList.add('hidden');
+      }, 8000);
+    }
+  } catch (e) {
+    btn.textContent = "🪑 I'm in my seat!";
+    btn.disabled = false;
+    toast('Could not send notification', 'error');
+  }
+}
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+(async function init(){
+  const path=location.pathname;
+  if(path.startsWith('/share/')){
+    await loadShareView(path.split('/')[2]);
+  } else {
+    await loadEvents();
+    renderHome();
+  }
+})();
+</script>
+</body>
+</html>
