@@ -1,6 +1,25 @@
+# Dependencies
+node_modules/
+
+# App data (contains personal event info & credentials)
 data.json
-*.jpg
-*.mp4
-*.jpeg
-*.hvec
-./node_modules
+
+# Uploaded media
+public/uploads/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
