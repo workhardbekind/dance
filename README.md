@@ -5,7 +5,7 @@ A real-time competition schedule manager built for dance parents. Create an even
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/workhardbekind)
 
 <img width="1483" height="1885" alt="image" src="https://github.com/user-attachments/assets/83c95f18-5bf5-4446-9d0f-2606989968c4" />
-<img width="1583" height="741" alt="image" src="https://github.com/user-attachments/assets/e5eb01a2-8b34-46be-873a-378fbf88e532" />
+
 
 
 ---
